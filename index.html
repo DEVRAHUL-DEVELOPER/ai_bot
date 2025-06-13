@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coder Army Dashboard & AI Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- SECTION 1: CSS STYLES (Unchanged) -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        :root { --primary-color: #ff6f61; --secondary-color: #4a4a4a; --bg-color: #f4f4f9; --card-bg: #ffffff; --font-color: #333; --user-msg-bg: #e1f5fe; --ai-msg-bg: #f1f1f1; }
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); color: var(--font-color); line-height: 1.6; margin: 0; }
+        .main-content { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+        .dashboard-header { text-align: center; margin-bottom: 2.5rem; }
+        .dashboard-header h1 { color: var(--primary-color); font-weight: 700; font-size: 2.5rem; }
+        .dashboard-header p { font-size: 1.1rem; color: #666; max-width: 600px; margin: 0.5rem auto 0; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+        .dashboard-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; text-align: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .dashboard-card:hover { transform: translateY(-8px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); }
+        .dashboard-card .icon { font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem; }
+        .dashboard-card h3 { font-weight: 600; margin-bottom: 0.5rem; color: var(--secondary-color); }
+        .dashboard-card p { font-size: 0.9rem; color: #777; }
+        .action-card { cursor: pointer; text-decoration: none; color: inherit; }
+        #open-chat-btn { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background-color: var(--primary-color); color: white; border: none; border-radius: 50%; font-size: 2rem; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; transition: transform 0.3s ease; }
+        #open-chat-btn:hover { transform: scale(1.1); }
+        #open-chat-btn.hidden { transform: scale(0); }
+        #chat-widget { position: fixed; bottom: 25px; right: 25px; width: 400px; height: 600px; max-height: 85vh; display: flex; flex-direction: column; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000; overflow: hidden; transform: translateY(20px) scale(0.95); opacity: 0; visibility: hidden; transition: transform 0.3s ease, opacity 0.3s ease, visibility 0s 0.3s; }
+        #chat-widget.active { transform: translateY(0) scale(1); opacity: 1; visibility: visible; transition: transform 0.3s ease, opacity 0.3s ease, visibility 0s 0s; }
+        .chat-container { width: 100%; height: 100%; background-color: #fff; display: flex; flex-direction: column; }
+        .chat-header { background-color: var(--primary-color); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .chat-header h2 { font-size: 1.2rem; margin: 0; }
+        #close-chat-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+        .chat-box { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #f9f9f9; }
+        .message { display: flex; align-items: flex-end; gap: 8px; max-width: 85%; }
+        .message-content-wrapper { padding: 10px 15px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; padding-bottom: 25px; position: relative; }
+        .message-time { position: absolute; bottom: 6px; right: 12px; font-size: 0.7rem; color: #999; }
+        .message .avatar { width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1rem; color: white; flex-shrink: 0; }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.user .message-content-wrapper { background-color: var(--user-msg-bg); border-bottom-right-radius: 5px; }
+        .message.user .avatar { background-color: #03a9f4; }
+        .message.ai { align-self: flex-start; }
+        .message.ai .message-content-wrapper { background-color: var(--ai-msg-bg); border-bottom-left-radius: 5px; }
+        .message.ai .avatar { background-color: var(--primary-color); }
+        .typing-dots span { width: 8px; height: 8px; margin: 0 2px; background-color: #aaa; border-radius: 50%; display: inline-block; animation: bounce 1.4s infinite both; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        .chat-footer { padding: 10px 15px; border-top: 1px solid #eee; flex-shrink: 0; background: #fff; }
+        .chat-form { display: flex; align-items: center; gap: 8px; }
+        #user-input { flex-grow: 1; border: 1px solid #ccc; border-radius: 20px; padding: 8px 15px; font-size: 0.9rem; outline: none; }
+        #user-input:disabled { background-color: #f0f0f0; cursor: not-allowed; }
+        .control-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #555; }
+        .control-btn:disabled { color: #ccc; cursor: not-allowed; }
+        #speaker-btn.active { color: var(--primary-color); }
+        #mic-btn.recording { color: red; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <!-- SECTION 2: DASHBOARD CONTENT (Unchanged) -->
+    <main class="main-content">
+        <div class="dashboard-header"><h1>Welcome to the Coder Army!</h1><p>Your journey to becoming a coding champion starts here. Explore our features or ask our AI assistant anything you need to know.</p></div>
+        <div class="dashboard-grid">
+            <a href="#" class="dashboard-card action-card" data-prompt="What is DSA and why is it important?"><div class="icon"><i class="fas fa-brain"></i></div><h3>What is DSA?</h3><p>Click to ask about Data Structures & Algorithms.</p></a>
+            <a href="#" class="dashboard-card action-card" data-prompt="Tell me everything about the Nexus Course."><div class="icon"><i class="fas fa-rocket"></i></div><h3>The Nexus Course</h3><p>Click for full details on our flagship course.</p></a>
+            <a href="#" class="dashboard-card action-card" data-prompt="Who is Rohit Negi Sir?"><div class="icon"><i class="fas fa-user-graduate"></i></div><h3>About the Instructor</h3><p>Click to learn more about your mentor, Rohit Negi.</p></a>
+            <a href="#" class="dashboard-card action-card" data-prompt="How do I enroll in a course?"><div class="icon"><i class="fas fa-shopping-cart"></i></div><h3>How to Enroll</h3><p>Click for simple instructions on joining a course.</p></a>
+            <div class="dashboard-card"><div class="icon"><i class="fas fa-chalkboard-teacher"></i></div><h3>Live Classes</h3><p>Engage in real-time with interactive live sessions.</p></div>
+            <div class="dashboard-card"><div class="icon"><i class="fas fa-language"></i></div><h3>Hinglish Teaching</h3><p>Learn complex topics in a comfortable language.</p></div>
+            <div class="dashboard-card"><div class="icon"><i class="fas fa-project-diagram"></i></div><h3>Real-World Projects</h3><p>Build an impressive portfolio with industry-grade projects.</p></div>
+            <div class="dashboard-card"><div class="icon"><i class="fas fa-hands-helping"></i></div><h3>Community Support</h3><p>Join a supportive community of fellow coders.</p></div>
+        </div>
+    </main>
+
+    <!-- FLOATING CHAT BUTTON & WIDGET MODAL (Unchanged) -->
+    <button id="open-chat-btn"><i class="fa-regular fa-comments"></i></button>
+    <div id="chat-widget">
+        <div class="chat-container">
+            <header class="chat-header"><h2><i class="fa-solid fa-code"></i> Coder Army AI</h2><button id="close-chat-btn" title="Close Chat">×</button></header>
+            <main id="chat-box" class="chat-box"></main>
+            <footer class="chat-footer">
+                <form id="chat-form" class="chat-form">
+                    <button type="button" id="mic-btn" class="control-btn" title="Use Voice"><i class="fa-solid fa-microphone"></i></button>
+                    <input type="text" id="user-input" placeholder="Ask anything..." required autocomplete="off">
+                    <button type="submit" id="send-btn" class="control-btn" title="Send"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button type="button" id="speaker-btn" class="control-btn active" title="Toggle Speech"><i class="fa-solid fa-volume-high"></i></button>
+                </form>
+            </footer>
+        </div>
+    </div>
+
+    <!-- SECTION 3: JAVASCRIPT LOGIC (FIXED & IMPROVED) -->
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        // ----------------- CONFIGURATION -----------------
+        const API_KEY = "AIzaSyBtCgaRAGBYnohYM7gWjUpbLCi8Sm0Vrrg"; // 🔴 DANGER: For LOCAL DEMO ONLY
+        const systemInstruction = `Namaste coder! 👨‍💻👩‍💻  
+Welcome to *Coder Army*! Yahaan milega asli coding ka gyaan Hinglish mein – with Rohit Negi Sir.  
+
+🧑‍🏫 About Rohit Sir:
+- IIT Guwahati pass out  
+- GATE AIR 200  
+- Uber engineer (₹2 Cr package)  
+- Now full-time coding teacher  
+- Founder of *Coder Army*
+
+
+
+🎓 Teaching Style:
+Rohit Sir DSA ko real-life examples se samjhate hain. Jab concept samajh aata hai, bolte hain “*Chamak Gya Hai!*” ⚡  
+Classes Hinglish mein hoti hain – Easy, fun & effective.
+
+💡 Coder Army Highlights:
+- ✅ Live interactive sessions  
+- ✅ Real coding examples  
+- ✅ DSA from basic to advanced  
+- ✅ Interview preparation  
+- ✅ Hinglish explanations  
+- ✅ Doubt support + Community
+
+💻 Courses Purchase:
+Website: [https://www.coderarmy.in/](https://www.coderarmy.in/)  
+App: Play Store pe *Coder Army* download karo.
+
+---
+
+🎉 *Nexus Course* – ₹4500 only (Birthday Gift Offer – till 9 June)
+
+🕐 Timing: Mon–Fri | 9–10 PM (LIVE)  
+🎥 Includes: Pre-recorded DSA + LIVE Web & Blockchain  
+📅 Start Date: 16 Sep 2024  
+💬 Doubts: Discord  
+🗓 Validity: 3 Years
+
+📚 Nexus Course Includes:
+
+**1. Web Development**  
+HTML, CSS, JS, React, Node, MongoDB, Auth, WebRTC, APIs, Projects (with deployment)
+
+**2. Blockchain**  
+Blockchain Basics, Ethereum, Solidity, Rust, Smart Contracts, Solana, Projects
+
+**3. DSA (Recorded)**  
+C++ based | 150+ hrs videos | 300+ coding questions | Beginner-friendly  
+Includes: Arrays, Recursion, OOP, Trees, Graphs, DP, STL, Pointers & more
+
+**4. System Design** (Starts: 7 July 2025)  
+HLD concepts + real-world problems: URL Shortener, Zomato, WhatsApp, YouTube, Twitter, etc.
+
+**5. Resume & LinkedIn Optimization**
+
+📧 Contact: negibhairohit9@gmail.com
+
+---
+
+🎯 INSTRUCTION FOR CHATBOT BEHAVIOR:
+
+- User se bas unka sawaal lo, aur uska jawab do.  
+- Jab chhoti baat ho, chhota reply do.  
+- Jab detail chahiye, full depth mein batao.  
+- Bina poocha gaya info mat do.  
+- Hinglish use karo – easy aur friendly tone mein.  
+- Har response mein clarity aur logic ho.
+
+---
+
+📢 Chatbot Starter Example:
+🤖: Namaste Coder! Kya aap ready ho coding ka asli gyaan paane ke liye?
+
+1️⃣ Mujhe DSA seekhna hai  
+2️⃣ Rohit Sir ke baare mein batao  
+3️⃣ Courses ka detail chahiye  
+4️⃣ Demo class dikhani hai  
+
+Apna option choose karo 👇
+`;
+
+        // Wait for the DOM to be fully loaded before running the app
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        function initApp() {
+            // ----------------- DOM & STATE VARIABLES -----------------
+            const actionCards = document.querySelectorAll('.action-card');
+            const openChatBtn = document.getElementById('open-chat-btn');
+            const closeChatBtn = document.getElementById('close-chat-btn');
+            const chatWidget = document.getElementById('chat-widget');
+            const chatBox = document.getElementById('chat-box');
+            const chatForm = document.getElementById('chat-form');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const micBtn = document.getElementById('mic-btn');
+            const speakerBtn = document.getElementById('speaker-btn');
+            let chat;
+            let isSpeechEnabled = true;
+            let aiReady = false;
+
+            // ----------------- WIDGET VISIBILITY & DASHBOARD ACTIONS -----------------
+            const openWidget = () => { chatWidget.classList.add('active'); openChatBtn.classList.add('hidden'); };
+            const closeWidget = () => { chatWidget.classList.remove('active'); openChatBtn.classList.remove('hidden'); };
+            openChatBtn.addEventListener('click', openWidget);
+            closeChatBtn.addEventListener('click', closeWidget);
+            actionCards.forEach(card => {
+                card.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (!aiReady) return; // Don't do anything if AI is not ready
+                    openWidget();
+                    userInput.value = card.dataset.prompt;
+                    chatForm.dispatchEvent(new Event('submit', { bubbles: true }));
+                });
+            });
+
+            // ----------------- AI INITIALIZATION -----------------
+            try {
+                const genAI = new GoogleGenerativeAI(API_KEY);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction });
+                chat = model.startChat({ history: [] });
+                aiReady = true;
+                // IMPROVED: Show welcome message only after successful initialization
+                addMessageToChat('ai', "Namaste Coder! How can I help you today?");
+            } catch (error) {
+                console.error("AI Initialization Error:", error);
+                aiReady = false;
+                // IMPROVED: Show clear error in the chat and disable input
+                addMessageToChat('ai', "Error: AI assistant could not be loaded. Please check the API Key or console for details.");
+                disableChatInput("AI not available");
+            }
+            
+            // ----------------- CORE CHAT LOGIC -----------------
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userMessage = userInput.value.trim();
+                if (!userMessage || !aiReady) return;
+
+                addMessageToChat('user', userMessage);
+                userInput.value = '';
+                showTypingIndicator(true);
+                try {
+                    const result = await chat.sendMessage(userMessage);
+                    const text = result.response.text();
+                    showTypingIndicator(false);
+                    addMessageToChat('ai', text);
+                    speak(text);
+                } catch (error) {
+                    showTypingIndicator(false);
+                    addMessageToChat('ai', 'Oops! Something went wrong communicating with the AI.');
+                    console.error('Error sending message:', error);
+                }
+            });
+            
+            // ----------------- VOICE & SPEECH LOGIC -----------------
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition && aiReady) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                micBtn.addEventListener('click', () => recognition.start());
+                recognition.onstart = () => micBtn.classList.add('recording');
+                recognition.onresult = (event) => {
+                    userInput.value = event.results[0][0].transcript;
+                    chatForm.dispatchEvent(new Event('submit'));
+                };
+                recognition.onerror = (event) => console.error('Speech recognition error:', event.error);
+                recognition.onend = () => micBtn.classList.remove('recording');
+            } else {
+                micBtn.style.display = 'none'; // Hide if not supported or AI failed
+            }
+
+            speakerBtn.addEventListener('click', () => {
+                isSpeechEnabled = !isSpeechEnabled;
+                speakerBtn.classList.toggle('active', isSpeechEnabled);
+                if (!isSpeechEnabled) window.speechSynthesis.cancel();
+            });
+            
+            // ----------------- HELPER FUNCTIONS -----------------
+            function speak(text) {
+                if (!isSpeechEnabled || !window.speechSynthesis) return;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-IN';
+                window.speechSynthesis.speak(utterance);
+            }
+            function addMessageToChat(sender, message) {
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', sender);
+                messageElement.innerHTML = `<div class="avatar"><i class="fa-solid ${sender === 'user' ? 'fa-user' : 'fa-robot'}"></i></div><div class="message-content-wrapper"><div class="message-content">${message}</div><span class="message-time">${time}</span></div>`;
+                chatBox.appendChild(messageElement);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+            function showTypingIndicator(show) {
+                let typingBubble = chatBox.querySelector('.typing-indicator-bubble');
+                if (show) {
+                    if (typingBubble) return;
+                    typingBubble = document.createElement('div');
+                    typingBubble.classList.add('message', 'ai', 'typing-indicator-bubble');
+                    typingBubble.innerHTML = `<div class="avatar"><i class="fa-solid fa-robot"></i></div><div class="message-content-wrapper"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+                    chatBox.appendChild(typingBubble);
+                } else {
+                    if (typingBubble) chatBox.removeChild(typingBubble);
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+            function disableChatInput(placeholderText) {
+                userInput.disabled = true;
+                userInput.placeholder = placeholderText;
+                sendBtn.disabled = true;
+                micBtn.disabled = true;
+                speakerBtn.disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>
